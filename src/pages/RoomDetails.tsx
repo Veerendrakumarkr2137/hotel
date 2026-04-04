@@ -9,10 +9,10 @@ export default function RoomDetails() {
   const [room, setRoom] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const fallbackImages = [
-    "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1551882547-ff40c0d13c90?auto=format&fit=crop&q=80",
+    "https://assets.anantara.com/image/upload/q_auto,f_auto,c_limit,w_1045/media/minor/anantara/images/anantara-peace-haven-tangalle-resort/accommodation/details-page/deluxe-ocean-view-room/anantara_peace_haven_tangalle_premier_ocean_view_room_bath_intro_944x510.jpg",
+    "https://www.fourseasons.com/alt/img-opt/~65.1701.0,0000-215,0231-3000,0000-1687,5000/publish/content/dam/fourseasons/images/web/BNG/BNG_768_original.jpg",
+    "https://www.royaltuskersuites.com/images/uploads/54/1663224403RT-EDR-3.png?59723793?0.21859776048476365",
+    "https://assets.anantara.com/image/upload/q_auto,f_auto,c_limit,w_1045/media/minor/anantara/images/anantara-peace-haven-tangalle-resort/accommodation/details-page/deluxe-ocean-view-room/anantara_peace_haven_tangalle_premier_ocean_view_room_bath_intro_944x510.jpg",
   ];
 
   useEffect(() => {
