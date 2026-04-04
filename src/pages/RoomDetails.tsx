@@ -8,6 +8,12 @@ export default function RoomDetails() {
   const { id } = useParams();
   const [room, setRoom] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const fallbackImages = [
+    "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1551882547-ff40c0d13c90?auto=format&fit=crop&q=80",
+  ];
 
   useEffect(() => {
     const fetchRoom = async () => {
@@ -33,6 +39,11 @@ export default function RoomDetails() {
     return <div className="text-center py-20 text-xl text-red-500">Room not found</div>;
   }
 
+  const roomImages = Array.isArray(room.images)
+    ? room.images.filter((img: string) => typeof img === "string" && img.trim().length > 0)
+    : [];
+  const galleryImages = roomImages.length > 0 ? roomImages : fallbackImages;
+
   return (
     <div className="container mx-auto px-4 py-16 max-w-7xl">
       <div className="grid lg:grid-cols-2 gap-12 bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-slate-100">
@@ -41,13 +52,13 @@ export default function RoomDetails() {
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl overflow-hidden aspect-[4/3] bg-slate-100">
             <img
-              src={room.images?.[0] || "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80"}
+              src={galleryImages[0]}
               alt={room.title}
               className="w-full h-full object-cover"
             />
           </div>
           <div className="grid grid-cols-3 gap-4">
-            {room.images?.slice(1, 4).map((img: string, i: number) => (
+            {galleryImages.slice(1, 4).map((img: string, i: number) => (
               <div key={i} className="aspect-square rounded-xl overflow-hidden bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity border border-slate-200">
                 <img src={img} alt={`View ${i+2}`} className="w-full h-full object-cover" />
               </div>

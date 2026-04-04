@@ -19,6 +19,11 @@ const containerVariants = {
 export default function Rooms() {
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const fallbackImages = [
+    "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&q=80",
+  ];
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -101,30 +106,36 @@ export default function Rooms() {
         animate="visible"
         className="relative grid gap-8 md:grid-cols-2 lg:grid-cols-3"
       >
-        {rooms.map((room) => (
-          <motion.div
-            key={room._id}
-            variants={revealSoft}
-            whileHover={hoverLift}
-            className="group flex flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm shadow-slate-200/50"
-          >
-            <div className="relative h-72 overflow-hidden">
-              <img
-                src={room.images?.[0] || "https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&q=80"}
-                alt={room.title}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-slate-950/10 to-transparent" />
-              <div className="absolute left-4 top-4 rounded-full border border-white/70 bg-white/90 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-slate-700 shadow-lg backdrop-blur-md">
-                {room.roomType}
+        {rooms.map((room) => {
+          const roomImages = Array.isArray(room.images)
+            ? room.images.filter((img: string) => typeof img === "string" && img.trim().length > 0)
+            : [];
+          const heroImage = roomImages[0] || fallbackImages[0];
+
+          return (
+            <motion.div
+              key={room._id}
+              variants={revealSoft}
+              whileHover={hoverLift}
+              className="group flex flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm shadow-slate-200/50"
+            >
+              <div className="relative h-72 overflow-hidden">
+                <img
+                  src={heroImage}
+                  alt={room.title}
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-slate-950/10 to-transparent" />
+                <div className="absolute left-4 top-4 rounded-full border border-white/70 bg-white/90 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-slate-700 shadow-lg backdrop-blur-md">
+                  {room.roomType}
+                </div>
+                <div className="absolute bottom-4 right-4 rounded-2xl border border-white/70 bg-white/92 px-4 py-2 text-sm font-bold text-slate-900 shadow-lg backdrop-blur-md">
+                  Rs. {room.price.toLocaleString("en-IN")}
+                  <span className="ml-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    / night
+                  </span>
+                </div>
               </div>
-              <div className="absolute bottom-4 right-4 rounded-2xl border border-white/70 bg-white/92 px-4 py-2 text-sm font-bold text-slate-900 shadow-lg backdrop-blur-md">
-                Rs. {room.price.toLocaleString("en-IN")}
-                <span className="ml-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                  / night
-                </span>
-              </div>
-            </div>
 
             <div className="flex flex-grow flex-col p-8">
               <div className="mb-4 flex items-center justify-between gap-3">
@@ -168,8 +179,9 @@ export default function Rooms() {
                 </Link>
               </div>
             </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
 
         {rooms.length === 0 && !loading && (
           <motion.div
