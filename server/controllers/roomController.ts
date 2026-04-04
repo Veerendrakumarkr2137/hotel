@@ -1,9 +1,14 @@
 import { Request, Response } from "express";
 import { Room } from "../models/Room";
+import { ensureDefaultRooms } from "../lib/ensureDefaultRooms";
 
 export const getRooms = async (req: Request, res: Response): Promise<any> => {
   try {
-    const rooms = await Room.find({});
+    let rooms = await Room.find({});
+    if (rooms.length === 0) {
+      await ensureDefaultRooms();
+      rooms = await Room.find({});
+    }
     return res.json({ success: true, rooms });
   } catch (error) {
     return res.status(500).json({ success: false, error: "Failed to fetch rooms" });
