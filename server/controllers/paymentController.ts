@@ -69,7 +69,7 @@ function getServerBaseUrl(request: AuthenticatedRequest) {
 }
 
 function getPhonePeStatusPath(merchantId: string, transactionId: string) {
-  return `/pg/v1/status/${merchantId}/${transactionId}`;
+  return `/pg/v1/status/${encodeURIComponent(merchantId)}/${encodeURIComponent(transactionId)}`;
 }
 
 function isValidBookingData(bookingData?: Partial<PaymentBookingData>): bookingData is PaymentBookingData {
