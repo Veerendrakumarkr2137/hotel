@@ -83,6 +83,12 @@ app.use(cors({
 
 app.use(express.json({ limit: "1mb" }));
 
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 1000 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+});
+app.use(globalLimiter);
 app.get("/api/health", async (_req, res) => {
   let supabaseStatus = "unknown";
   try {

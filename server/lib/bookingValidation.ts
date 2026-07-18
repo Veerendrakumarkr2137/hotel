@@ -62,7 +62,7 @@ export async function validateBookingInput(room: RoomRecord, bookingData?: RawBo
     throw new BookingValidationError("Name, email, and phone are required");
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
     throw new BookingValidationError("Please provide a valid email address");
   }
 
