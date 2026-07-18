@@ -1,3 +1,5 @@
+console.log("Starting server process...");
+
 import express from "express";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -12,6 +14,7 @@ import bookingRoutes from "./server/routes/bookingRoutes";
 import adminRoutes from "./server/routes/adminRoutes";
 import paymentRoutes from "./server/routes/paymentRoutes";
 import passwordRoutes from "./server/routes/passwordRoutes";
+import galleryRoutes from "./server/routes/galleryRoutes";
 import { ensureDefaultRooms } from "./server/lib/ensureDefaultRooms";
 import { getAllowedCorsOrigins, validateEnv } from "./server/lib/runtimeConfig";
 import { rateLimit } from "./server/middleware/rateLimit";
@@ -26,10 +29,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const envValidation = validateEnv(IS_PRODUCTION);
 if (envValidation.missing.length > 0) {
-  console.error(
-    `Missing required environment variables: ${envValidation.missing.join(", ")}`,
-  );
-  process.exit(1);
+  throw new Error(`Missing required environment variables: ${envValidation.missing.join(", ")}`);
 }
 if (envValidation.warnings.length > 0) {
   console.warn(
@@ -121,8 +121,6 @@ const bookingLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 120,
 });
-
-import galleryRoutes from "./server/routes/galleryRoutes";
 
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api", authLimiter, passwordRoutes);
