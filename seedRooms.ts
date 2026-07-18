@@ -1,25 +1,36 @@
-import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { Room } from "./server/models/Room";
+import { supabase } from "./server/lib/supabaseClient";
 import { defaultRooms } from "./server/data/defaultRooms";
-import { syncRoomIndexes } from "./server/lib/ensureDefaultRooms";
 
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/hotel-sai";
-
 async function seedDatabase() {
   try {
-    console.log("Connecting to MongoDB...");
-    await mongoose.connect(MONGODB_URI);
-    console.log("Connected successfully.");
-    await syncRoomIndexes();
-
+    console.log("Connecting to Supabase...");
+    
     console.log("Clearing existing rooms...");
-    await Room.deleteMany({});
+    // Direct delete requires a filter condition in PostgREST, so we match everything not equal to a zero UUID
+    const { error: deleteError } = await supabase
+      .from("rooms")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (deleteError) throw deleteError;
     
     console.log("Inserting sample rooms...");
-    await Room.insertMany(defaultRooms);
+    const rows = defaultRooms.map((room) => ({
+      title: room.title,
+      description: room.description,
+      price: room.price,
+      images: room.images,
+      room_type: room.roomType,
+      capacity: room.capacity,
+      amenities: room.amenities,
+      available_rooms: room.availableRooms,
+    }));
+
+    const { error: insertError } = await supabase.from("rooms").insert(rows);
+    if (insertError) throw insertError;
     
     console.log("Sample rooms seeded successfully!");
     process.exit(0);

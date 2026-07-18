@@ -224,7 +224,7 @@ export default function PaymentPage() {
           ...createAuthHeaders(token),
         },
         body: JSON.stringify({
-          bookingId: booking._id,
+          bookingId: booking.id,
         }),
       });
       const data = await response.json();
@@ -253,7 +253,7 @@ export default function PaymentPage() {
     setIsSubmittingManualPayment(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/bookings/${booking._id}/confirm-payment`, {
+      const response = await fetch(`${API_URL}/api/bookings/${booking.id}/confirm-payment`, {
         method: "POST",
         headers: createAuthHeaders(token),
       });
@@ -275,7 +275,7 @@ export default function PaymentPage() {
       setBooking(data.booking);
       setPaymentView(getPaymentView(data.booking.paymentStatus));
       toast.success(data.message || "Payment submitted successfully.");
-      navigate(`/booking-confirmation/${booking._id}`);
+      navigate(`/booking-confirmation/${booking.id}`);
     } catch {
       toast.error("Unable to submit payment right now.");
     } finally {

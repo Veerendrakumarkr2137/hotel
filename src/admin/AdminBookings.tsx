@@ -23,10 +23,10 @@ export default function AdminBookings() {
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (token) {
+    if (adminToken) {
       fetchBookings();
     }
-  }, [token]);
+  }, [adminToken]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -169,7 +169,7 @@ export default function AdminBookings() {
           <tbody className="divide-y divide-slate-100 text-sm">
             {filteredBookings.map((booking, index) => (
               <motion.tr
-                key={booking._id}
+                key={booking.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, delay: index * 0.03 }}
@@ -218,7 +218,7 @@ export default function AdminBookings() {
                   <motion.div whileHover={{ y: -1 }}>
                     <select
                       value={booking.bookingStatus}
-                      onChange={(e) => updateStatus(booking._id, e.target.value)}
+                      onChange={(e) => updateStatus(booking.id, e.target.value)}
                       className={`block w-full cursor-pointer rounded-lg border border-transparent p-2 px-3 text-sm font-semibold outline-none focus:border-slate-900 focus:ring-slate-900 ${getBookingStatusSelectClasses(booking.bookingStatus)}`}
                     >
                       <option value="pending" className="text-slate-900">
@@ -254,11 +254,11 @@ export default function AdminBookings() {
                         <motion.button
                           whileHover={{ y: -1 }}
                           whileTap={{ scale: 0.95 }}
-                          onClick={() => verifyManualPayment(booking._id)}
-                          disabled={verifyingId === booking._id}
+                          onClick={() => verifyManualPayment(booking.id)}
+                          disabled={verifyingId === booking.id}
                           className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-70"
                         >
-                          {verifyingId === booking._id ? (
+                          {verifyingId === booking.id ? (
                             <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-300 border-t-emerald-700" />
                           ) : (
                             <CheckCircle2 className="h-4 w-4" />
@@ -269,7 +269,7 @@ export default function AdminBookings() {
                     <motion.button
                       whileHover={{ y: -1 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => deleteBooking(booking._id)}
+                      onClick={() => deleteBooking(booking.id)}
                       className="rounded-lg bg-red-50 p-2 text-red-600 transition-colors hover:text-red-800"
                     >
                       <Trash2 className="w-5 h-5" />

@@ -15,12 +15,15 @@ export default function RoomDetails() {
     "https://assets.anantara.com/image/upload/q_auto,f_auto,c_limit,w_1045/media/minor/anantara/images/anantara-peace-haven-tangalle-resort/accommodation/details-page/deluxe-ocean-view-room/anantara_peace_haven_tangalle_premier_ocean_view_room_bath_intro_944x510.jpg",
   ];
 
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
   useEffect(() => {
     const fetchRoom = async () => {
       try {
         const { data } = await axios.get(`${API_URL}/api/rooms/${id}`);
         if (data.success) {
           setRoom(data.room);
+          setSelectedIndex(0); // Reset selection when room changes
         }
       } catch (err) {
         console.error("Failed to fetch room details:", err);
@@ -42,7 +45,11 @@ export default function RoomDetails() {
   const roomImages = Array.isArray(room.images)
     ? room.images.filter((img: string) => typeof img === "string" && img.trim().length > 0)
     : [];
-  const galleryImages = roomImages.length > 0 ? roomImages : fallbackImages;
+  
+  // Only use fallbacks if there are absolutely NO images
+  const galleryImages = roomImages.length > 0 ? roomImages : [fallbackImages[0]];
+  const mainImage = galleryImages[selectedIndex] || galleryImages[0];
+  const thumbnailIndices = galleryImages.map((_, i) => i).filter(i => i !== selectedIndex);
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-7xl">
@@ -50,20 +57,33 @@ export default function RoomDetails() {
         
         {/* Left Col: Imagery */}
         <div className="flex flex-col gap-4">
-          <div className="rounded-2xl overflow-hidden aspect-[4/3] bg-slate-100">
+          <div className="rounded-2xl overflow-hidden aspect-[4/3] bg-slate-100 relative group">
             <img
-              src={galleryImages[0]}
+              src={mainImage}
               alt={room.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-all duration-500"
             />
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            {galleryImages.slice(1, 4).map((img: string, i: number) => (
-              <div key={i} className="aspect-square rounded-xl overflow-hidden bg-slate-100 cursor-pointer hover:opacity-90 transition-opacity border border-slate-200">
-                <img src={img} alt={`View ${i+2}`} className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
+          
+          {thumbnailIndices.length > 0 && (
+            <div className={`grid gap-4 ${
+              thumbnailIndices.length === 1 ? 'grid-cols-2' :
+              thumbnailIndices.length === 2 ? 'grid-cols-2' :
+              'grid-cols-3'
+            }`}>
+              {thumbnailIndices.map((index) => (
+                <div 
+                  key={index} 
+                  onClick={() => setSelectedIndex(index)}
+                  className={`rounded-xl overflow-hidden bg-slate-100 cursor-pointer hover:opacity-75 transition-opacity border border-slate-200 ${
+                    thumbnailIndices.length === 1 ? 'aspect-[2/1] col-span-2' : 'aspect-square'
+                  }`}
+                >
+                  <img src={galleryImages[index]} alt={`View ${index + 1}`} className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Col: Info */}
@@ -109,7 +129,7 @@ export default function RoomDetails() {
 
           <div className="mt-auto">
             <Link
-              to={`/book/${room._id}`}
+              to={`/book/${room.id}`}
               className="w-full flex items-center justify-center text-center bg-slate-900 text-white font-semibold py-4 rounded-xl text-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-[0.98]"
             >
               Reserve this Room

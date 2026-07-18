@@ -1,7 +1,6 @@
-import { Types } from "mongoose";
-import { Booking } from "../models/Booking";
-import { Room } from "../models/Room";
+import { supabase } from "./supabaseClient";
 import { ACTIVE_BOOKING_STATUSES } from "./bookingLifecycle";
+import { RoomRecord } from "../types/database";
 
 type RawBookingData = {
   roomId?: string;
@@ -49,7 +48,7 @@ function calculateNights(checkInDate: Date, checkOutDate: Date) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export async function validateBookingInput(room: InstanceType<typeof Room>, bookingData?: RawBookingData) {
+export async function validateBookingInput(room: RoomRecord, bookingData?: RawBookingData) {
   if (!bookingData) {
     throw new BookingValidationError("Booking details are required");
   }
@@ -75,7 +74,7 @@ export async function validateBookingInput(room: InstanceType<typeof Room>, book
     throw new BookingValidationError(`This room allows up to ${room.capacity} guest(s)`);
   }
 
-  if (room.availableRooms <= 0) {
+  if (room.available_rooms <= 0) {
     throw new BookingValidationError("This room is currently unavailable", 409);
   }
 
@@ -110,24 +109,31 @@ export async function validateBookingInput(room: InstanceType<typeof Room>, book
 }
 
 export async function ensureRoomAvailability(
-  roomId: string | Types.ObjectId,
+  roomId: string,
   checkInDate: Date,
   checkOutDate: Date,
   availableRooms: number,
-  excludeBookingId?: string | Types.ObjectId,
+  excludeBookingId?: string,
 ) {
-  const overlapQuery: Record<string, unknown> = {
-    roomId,
-    bookingStatus: { $in: ACTIVE_BOOKING_STATUSES },
-    checkInDate: { $lt: checkOutDate },
-    checkOutDate: { $gt: checkInDate },
-  };
+  let query = supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("room_id", roomId)
+    .in("booking_status", ACTIVE_BOOKING_STATUSES)
+    .lt("check_in_date", checkOutDate.toISOString())
+    .gt("check_out_date", checkInDate.toISOString());
 
   if (excludeBookingId) {
-    overlapQuery._id = { $ne: excludeBookingId };
+    query = query.neq("id", excludeBookingId);
   }
 
-  const overlappingBookings = await Booking.countDocuments(overlapQuery);
+  const { count, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const overlappingBookings = count || 0;
 
   if (overlappingBookings >= availableRooms) {
     throw new BookingValidationError("Selected dates are no longer available for this room", 409);

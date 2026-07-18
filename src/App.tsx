@@ -25,6 +25,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const MyBookings = lazy(() => import("./pages/MyBookings"));
 
 // Admin pages
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
@@ -33,9 +34,7 @@ const AdminRooms = lazy(() => import("./admin/AdminRooms"));
 const AdminBookings = lazy(() => import("./admin/AdminBookings"));
 const AdminCheckIn = lazy(() => import("./admin/AdminCheckIn"));
 const AdminCheckOut = lazy(() => import("./admin/AdminCheckOut"));
-
-// User Pages
-const MyBookings = lazy(() => import("./pages/MyBookings"));
+const AdminGallery = lazy(() => import("./admin/AdminGallery"));
 
 function PageLoader({ fullHeight = false }: { fullHeight?: boolean }) {
   return (
@@ -144,6 +143,7 @@ export default function App() {
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="check-in" element={<AdminCheckIn />} />
             <Route path="check-out" element={<AdminCheckOut />} />
+            <Route path="gallery" element={<AdminGallery />} />
           </Route>
 
           {/* Fallback */}

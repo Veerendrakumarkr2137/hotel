@@ -15,6 +15,7 @@ export default function AdminSidebar() {
     { name: "Bookings", path: "/admin/bookings", icon: ClipboardList },
     { name: "Check-In", path: "/admin/check-in", icon: LogIn },
     { name: "Check-Out", path: "/admin/check-out", icon: LogOut },
+    { name: "Gallery", path: "/admin/gallery", icon: Hotel },
   ];
 
   return (

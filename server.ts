@@ -3,7 +3,6 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 
@@ -13,11 +12,12 @@ import bookingRoutes from "./server/routes/bookingRoutes";
 import adminRoutes from "./server/routes/adminRoutes";
 import paymentRoutes from "./server/routes/paymentRoutes";
 import passwordRoutes from "./server/routes/passwordRoutes";
-import { ensureDefaultRooms, syncRoomIndexes } from "./server/lib/ensureDefaultRooms";
-import { getAllowedCorsOrigins, getMongoUri, validateEnv } from "./server/lib/runtimeConfig";
+import { ensureDefaultRooms } from "./server/lib/ensureDefaultRooms";
+import { getAllowedCorsOrigins, validateEnv } from "./server/lib/runtimeConfig";
 import { rateLimit } from "./server/middleware/rateLimit";
 import { monitorRequests } from "./server/middleware/monitoring";
 import { searchBooking } from "./server/controllers/bookingController";
+import { supabase } from "./server/lib/supabaseClient";
 
 dotenv.config();
 
@@ -37,7 +37,7 @@ if (envValidation.warnings.length > 0) {
   );
 }
 
-const MONGODB_URI = getMongoUri(IS_PRODUCTION);
+// Supabase project configurations verified in validateEnv
 
 const app = express();
 
@@ -83,13 +83,21 @@ app.use(cors({
 
 app.use(express.json({ limit: "1mb" }));
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", async (_req, res) => {
+  let supabaseStatus = "unknown";
+  try {
+    const { error } = await supabase.from("rooms").select("id").limit(1);
+    supabaseStatus = error ? "error" : "connected";
+  } catch (err) {
+    supabaseStatus = "disconnected";
+  }
+
   res.json({
     success: true,
     status: "ok",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    mongodb: mongoose.connection.readyState,
+    supabase: supabaseStatus,
   });
 });
 
@@ -108,33 +116,29 @@ const bookingLimiter = rateLimit({
   max: 120,
 });
 
+import galleryRoutes from "./server/routes/galleryRoutes";
+
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api", authLimiter, passwordRoutes);
 app.post("/api/search-booking", searchBooking);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/gallery", galleryRoutes);
 app.use("/api/bookings", bookingLimiter, bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentLimiter, paymentRoutes);
 
-mongoose
-  .connect(MONGODB_URI)
-  .then(async () => {
-    console.log("Connected to MongoDB");
-    try {
-      await syncRoomIndexes();
-      const seeded = await ensureDefaultRooms();
-      if (seeded) {
-        console.log("Inserted default rooms because the collection was empty.");
-      }
-    } catch (seedError) {
-      console.error("Failed to synchronize room indexes or seed default rooms:", seedError);
+(async () => {
+  console.log("Initializing Supabase database...");
+  try {
+    const seeded = await ensureDefaultRooms();
+    if (seeded) {
+      console.log("Inserted default rooms because the PostgreSQL table was empty.");
     }
-    startServer();
-  })
-  .catch((error) => {
-    console.error("MongoDB connection error:", error);
-    startServer();
-  });
+  } catch (seedError) {
+    console.error("Failed to seed default rooms in PostgreSQL:", seedError);
+  }
+  startServer();
+})();
 
 async function startServer() {
   if (!IS_PRODUCTION) {

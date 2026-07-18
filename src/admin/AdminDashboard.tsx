@@ -17,7 +17,7 @@ type DashboardStats = {
 };
 
 type AdminUser = {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: "admin" | "user";
@@ -211,7 +211,7 @@ export default function AdminDashboard() {
           <div className="mt-3 space-y-1.5">
             {recentUsers.length > 0 ? (
               recentUsers.map((user) => (
-                <div key={user._id} className="truncate text-sm text-slate-600">
+                <div key={user.id} className="truncate text-sm text-slate-600">
                   <span className="font-medium text-slate-900">{user.name}</span>
                   {" - "}
                   <span className="truncate">{user.email}</span>

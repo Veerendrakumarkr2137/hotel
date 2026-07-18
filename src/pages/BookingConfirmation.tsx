@@ -192,7 +192,7 @@ export default function BookingConfirmationPage() {
       return;
     }
 
-    if (!booking?._id) {
+    if (!booking?.id) {
       return;
     }
 
@@ -205,7 +205,7 @@ export default function BookingConfirmationPage() {
           "Content-Type": "application/json",
           ...createAuthHeaders(token),
         },
-        body: JSON.stringify({ bookingId: booking._id }),
+        body: JSON.stringify({ bookingId: booking.id }),
       });
       const data = await response.json();
 
@@ -225,7 +225,7 @@ export default function BookingConfirmationPage() {
   const handleSubmitManualPayment = async () => {
     const token = getUserToken();
 
-    if (!token || !booking?._id) {
+    if (!token || !booking?.id) {
       navigate(loginRedirect, { replace: true });
       return;
     }
@@ -233,7 +233,7 @@ export default function BookingConfirmationPage() {
     setIsSubmittingManualPayment(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/bookings/${booking._id}/confirm-payment`, {
+      const response = await fetch(`${API_URL}/api/bookings/${booking.id}/confirm-payment`, {
         method: "POST",
         headers: createAuthHeaders(token),
       });
@@ -488,7 +488,7 @@ export default function BookingConfirmationPage() {
 
                   {booking.paymentMethod === "pay_at_hotel" && booking.paymentStatus !== "paid" && paymentConfig.phonePeEnabled && (
                     <button
-                      onClick={() => navigate(`/payment/${booking._id}`)}
+                      onClick={() => navigate(`/payment/${booking.id}`)}
                       className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800"
                     >
                       <CreditCard className="h-4 w-4" />

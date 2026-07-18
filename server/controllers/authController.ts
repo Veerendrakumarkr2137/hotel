@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
-import { User } from "../models/User";
+import { supabase } from "../lib/supabaseClient";
 import { getFrontendUrl, getJwtSecret } from "../lib/runtimeConfig";
-import { buildCaseInsensitiveEmailLookup, normalizeEmail } from "../lib/userEmail";
+import { normalizeEmail } from "../lib/userEmail";
+import { UserRecord } from "../types/database";
 
 const JWT_SECRET = getJwtSecret();
 const PASSWORD_RESET_TTL_MINUTES = 30;
@@ -63,31 +63,32 @@ function sendPasswordResetEmail(email: string, resetUrl: string) {
   });
 }
 
-async function findUserByEmailAndPassword(email: string, password: string) {
+async function findUserByEmailAndPassword(email: string, password: string): Promise<UserRecord | null> {
   const normalizedEmail = normalizeEmail(email);
-  const candidates = await User.find({ email: buildCaseInsensitiveEmailLookup(normalizedEmail) }).sort({ createdAt: -1 });
+  
+  const { data: candidates, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", normalizedEmail)
+    .order("created_at", { ascending: false });
 
-  const exactMatchIndex = candidates.findIndex((candidate) => candidate.email === normalizedEmail);
-
-  if (exactMatchIndex > 0) {
-    const [exactMatch] = candidates.splice(exactMatchIndex, 1);
-    candidates.unshift(exactMatch);
+  if (error || !candidates || candidates.length === 0) {
+    return null;
   }
 
   for (const candidate of candidates) {
     const isMatch = await bcrypt.compare(password, candidate.password);
-
     if (isMatch) {
-      return candidate;
+      return candidate as UserRecord;
     }
   }
 
   return null;
 }
 
-function issueUserToken(user: { _id: mongoose.Types.ObjectId; email: string }) {
+function issueUserToken(user: UserRecord) {
   return jwt.sign(
-    { role: "user", userId: user._id.toString(), email: user.email },
+    { role: "user", userId: user.id, email: user.email },
     JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -112,18 +113,31 @@ export const registerUser = async (req: Request, res: Response): Promise<any> =>
     const normalizedName = String(name).trim();
     const normalizedEmail = normalizeEmail(String(email));
 
-    const existingUser = await User.findOne({ email: buildCaseInsensitiveEmailLookup(normalizedEmail) });
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
     if (existingUser) {
       return res.status(400).json({ success: false, error: "User already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name: normalizedName, email: normalizedEmail, password: hashedPassword });
+    const { data: user, error } = await supabase
+      .from("users")
+      .insert({ name: normalizedName, email: normalizedEmail, password: hashedPassword })
+      .select()
+      .single();
+
+    if (error || !user) {
+      throw new Error(error?.message || "Failed to create user record");
+    }
 
     return res.status(201).json({
       success: true,
       message: "Registered successfully",
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, _id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error: any) {
     console.error("Registration error:", error.message);
@@ -147,7 +161,7 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
     return res.json({
       success: true,
       token: issueUserToken(user),
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, _id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error: any) {
     console.error("Login error:", error.message);
@@ -198,19 +212,33 @@ export const loginWithGoogle = async (req: Request, res: Response): Promise<any>
       return res.status(400).json({ success: false, error: "Unable to read Google account email" });
     }
 
-    let user = await User.findOne({ email: buildCaseInsensitiveEmailLookup(email) });
+    let { data: user } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
 
     if (!user) {
       const randomPassword = crypto.randomBytes(24).toString("hex");
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
       const displayName = payload?.name?.trim() || "Guest";
-      user = await User.create({ name: displayName, email, password: hashedPassword });
+      
+      const { data: newUser, error } = await supabase
+        .from("users")
+        .insert({ name: displayName, email, password: hashedPassword })
+        .select()
+        .single();
+
+      if (error || !newUser) {
+        throw new Error(error?.message || "Failed to create Google user");
+      }
+      user = newUser;
     }
 
     return res.json({
       success: true,
-      token: issueUserToken(user),
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      token: issueUserToken(user as UserRecord),
+      user: { id: user.id, _id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error: any) {
     console.error("Google login error:", error?.message || error);
@@ -226,16 +254,26 @@ export const forgotPassword = async (req: Request, res: Response): Promise<any> 
     }
 
     const normalizedEmail = normalizeEmail(rawEmail);
-    const user = await User.findOne({ email: buildCaseInsensitiveEmailLookup(normalizedEmail) });
+    const { data: user } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
 
     if (user) {
       const resetToken = crypto.randomBytes(32).toString("hex");
       const resetTokenHash = hashResetToken(resetToken);
       const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
 
-      user.passwordResetTokenHash = resetTokenHash;
-      user.passwordResetExpiresAt = expiresAt;
-      await user.save();
+      const { error } = await supabase
+        .from("users")
+        .update({
+          password_reset_token_hash: resetTokenHash,
+          password_reset_expires_at: expiresAt.toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
 
       const resetUrl = `${getFrontendUrl()}/reset-password?token=${resetToken}`;
       sendPasswordResetEmail(user.email, resetUrl);
@@ -273,19 +311,29 @@ export const resetPassword = async (req: Request, res: Response): Promise<any> =
     }
 
     const resetTokenHash = hashResetToken(token);
-    const user = await User.findOne({
-      passwordResetTokenHash: resetTokenHash,
-      passwordResetExpiresAt: { $gt: new Date() },
-    });
+    const { data: user } = await supabase
+      .from("users")
+      .select("*")
+      .eq("password_reset_token_hash", resetTokenHash)
+      .gt("password_reset_expires_at", new Date().toISOString())
+      .maybeSingle();
 
     if (!user) {
       return res.status(400).json({ success: false, error: "This reset link is invalid or has expired." });
     }
 
-    user.password = await bcrypt.hash(password, 10);
-    user.passwordResetTokenHash = null;
-    user.passwordResetExpiresAt = null;
-    await user.save();
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const { error } = await supabase
+      .from("users")
+      .update({
+        password: hashedPassword,
+        password_reset_token_hash: null,
+        password_reset_expires_at: null,
+      })
+      .eq("id", user.id);
+
+    if (error) throw error;
 
     return res.json({ success: true, message: "Password reset successful." });
   } catch (error: any) {
@@ -301,14 +349,19 @@ export const getCurrentUser = async (req: any, res: Response): Promise<any> => {
       return res.status(401).json({ success: false, error: "Invalid session" });
     }
 
-    const user = await User.findById(userId).select("name email");
-    if (!user) {
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id, name, email")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error || !user) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
 
     return res.json({
       success: true,
-      user: { id: user._id.toString(), name: user.name, email: user.email, role: "user" },
+      user: { id: user.id, _id: user.id, name: user.name, email: user.email, role: "user" },
     });
   } catch (error: any) {
     console.error("Get profile error:", error?.message || error);
@@ -331,24 +384,31 @@ export const updateProfile = async (req: any, res: Response): Promise<any> => {
     const normalizedName = String(name).trim();
     const normalizedEmail = normalizeEmail(String(email));
 
-    const existingUser = await User.findOne({ email: buildCaseInsensitiveEmailLookup(normalizedEmail), _id: { $ne: userId } });
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", normalizedEmail)
+      .neq("id", userId)
+      .maybeSingle();
+
     if (existingUser) {
       return res.status(400).json({ success: false, error: "Email is already in use" });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { name: normalizedName, email: normalizedEmail },
-      { new: true }
-    ).select("name email");
+    const { data: updatedUser, error: updateError } = await supabase
+      .from("users")
+      .update({ name: normalizedName, email: normalizedEmail })
+      .eq("id", userId)
+      .select("id, name, email")
+      .single();
 
-    if (!updatedUser) {
-      return res.status(404).json({ success: false, error: "User not found" });
+    if (updateError || !updatedUser) {
+      throw updateError || new Error("Failed to update profile");
     }
 
     return res.json({
       success: true,
-      user: { id: updatedUser._id.toString(), name: updatedUser.name, email: updatedUser.email, role: "user" },
+      user: { id: updatedUser.id, _id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, role: "user" },
     });
   } catch (error: any) {
     console.error("Update profile error:", error?.message || error);
@@ -368,7 +428,12 @@ export const changePassword = async (req: any, res: Response): Promise<any> => {
       return res.status(400).json({ success: false, error: "Please provide both passwords" });
     }
 
-    const user = await User.findById(userId);
+    const { data: user } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+
     if (!user) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
@@ -379,8 +444,12 @@ export const changePassword = async (req: any, res: Response): Promise<any> => {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
+    const { error } = await supabase
+      .from("users")
+      .update({ password: hashedPassword })
+      .eq("id", userId);
+
+    if (error) throw error;
 
     return res.json({ success: true, message: "Password updated successfully" });
   } catch (error: any) {

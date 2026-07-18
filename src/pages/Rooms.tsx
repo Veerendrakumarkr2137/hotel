@@ -114,7 +114,7 @@ export default function Rooms() {
 
           return (
             <motion.div
-              key={room._id}
+              key={room.id}
               variants={revealSoft}
               whileHover={hoverLift}
               className="group flex flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-sm shadow-slate-200/50"
@@ -165,13 +165,13 @@ export default function Rooms() {
 
               <div className="mt-auto flex gap-4 pt-8">
                 <Link
-                  to={`/room/${room._id}`}
+                  to={`/room/${room.id}`}
                   className="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 py-4 text-sm font-bold text-slate-900 transition-all hover:bg-slate-100"
                 >
                   Details
                 </Link>
                 <Link
-                  to={`/book/${room._id}`}
+                  to={`/book/${room.id}`}
                   className="group/cta inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 py-4 text-sm font-bold text-white shadow-lg shadow-blue-200/70 transition-all hover:bg-blue-700"
                 >
                   Book Now

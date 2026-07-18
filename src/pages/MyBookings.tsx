@@ -48,7 +48,7 @@ export default function MyBookings() {
         { headers: { Authorization: `Bearer ${userToken}` } }
       );
       if (data.success) {
-        setBookings(bookings.map(b => b._id === bookingId ? { ...b, bookingStatus: 'cancelled' } : b));
+        setBookings(bookings.map(b => b.id === bookingId ? { ...b, bookingStatus: 'cancelled' } : b));
         toast.success("Booking cancelled successfully");
       } else {
         toast.error(data.error || "Failed to cancel booking");
@@ -80,7 +80,7 @@ export default function MyBookings() {
       ) : (
         <div className="grid gap-6">
           {bookings.map((booking) => (
-            <div key={booking._id} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-8 items-start hover:shadow-lg transition-all">
+            <div key={booking.id} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-8 items-start hover:shadow-lg transition-all">
               <div className="w-full md:w-1/3 aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
                 <img
                   src={booking.roomId?.images?.[0] || "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80"}
@@ -134,7 +134,7 @@ export default function MyBookings() {
                     </div>
                     <div className="mb-3">
                       <Link
-                        to={`/booking-confirmation/${booking._id}`}
+                        to={`/booking-confirmation/${booking.id}`}
                         className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -142,11 +142,11 @@ export default function MyBookings() {
                       </Link>
                     </div>
                     <button 
-                      onClick={() => handleCancelBooking(booking._id)}
-                      disabled={canceling === booking._id}
+                      onClick={() => handleCancelBooking(booking.id)}
+                      disabled={canceling === booking.id}
                       className="text-red-500 hover:text-red-600 font-semibold text-sm transition-colors disabled:opacity-50"
                     >
-                      {canceling === booking._id ? "Cancelling..." : "Cancel Booking"}
+                      {canceling === booking.id ? "Cancelling..." : "Cancel Booking"}
                     </button>
                     <p className="text-xs text-slate-400 mt-1">Free cancellation up to 48 hours before check-in.</p>
                   </div>
@@ -160,7 +160,7 @@ export default function MyBookings() {
                     </div>
                     <div className="mb-3">
                       <Link
-                        to={`/booking-confirmation/${booking._id}`}
+                        to={`/booking-confirmation/${booking.id}`}
                         className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-800"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -188,7 +188,7 @@ export default function MyBookings() {
                     </div>
                     <div className="mb-3">
                       <Link
-                        to={booking.paymentMethod === "manual_upi" ? `/booking-confirmation/${booking._id}` : `/payment/${booking._id}`}
+                        to={booking.paymentMethod === "manual_upi" ? `/booking-confirmation/${booking.id}` : `/payment/${booking.id}`}
                         className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900"
                       >
                         <CalendarDays className="h-4 w-4" />

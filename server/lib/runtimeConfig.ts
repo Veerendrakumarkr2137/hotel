@@ -29,12 +29,15 @@ export function validateEnv(isProduction: boolean): EnvValidationResult {
   const missing: string[] = [];
   const warnings: string[] = [];
 
-  const mongoUri = getTrimmedEnv("MONGODB_URI") || getTrimmedEnv("MONGO_URI");
-  if (!mongoUri) {
+  const supabaseUrl = getTrimmedEnv("SUPABASE_URL");
+  const supabaseKey = getTrimmedEnv("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !supabaseKey) {
     if (isProduction) {
-      missing.push("MONGODB_URI");
+      if (!supabaseUrl) missing.push("SUPABASE_URL");
+      if (!supabaseKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
     } else {
-      warnings.push("MONGODB_URI");
+      if (!supabaseUrl) warnings.push("SUPABASE_URL");
+      if (!supabaseKey) warnings.push("SUPABASE_SERVICE_ROLE_KEY");
     }
   }
 
@@ -92,19 +95,6 @@ export function validateEnv(isProduction: boolean): EnvValidationResult {
   }
 
   return { missing, warnings };
-}
-
-export function getMongoUri(isProduction: boolean) {
-  const uri = getTrimmedEnv("MONGODB_URI") || getTrimmedEnv("MONGO_URI");
-  if (uri) {
-    return uri;
-  }
-
-  if (!isProduction) {
-    return "mongodb://localhost:27017/hotel-sai";
-  }
-
-  throw new Error("MONGODB_URI is required in production.");
 }
 
 export function getJwtSecret() {

@@ -145,7 +145,7 @@ export default function BookingPage() {
 
     try {
       const bookingData = {
-        roomId: room._id,
+        roomId: room.id,
         ...formData,
         totalPrice: totalAmount,
       };
@@ -159,7 +159,7 @@ export default function BookingPage() {
 
         if (data.success) {
           toast.success("Booking confirmed! Please pay at the hotel upon arrival.");
-          navigate(`/booking-confirmation/${data.booking._id}`);
+          navigate(`/booking-confirmation/${data.booking.id}`);
         }
 
         return;
@@ -174,7 +174,7 @@ export default function BookingPage() {
 
         if (data.success) {
           toast.success("Booking created. Complete the hotel UPI payment to finish confirmation.");
-          navigate(`/payment/${data.booking._id}`);
+          navigate(`/payment/${data.booking.id}`);
         }
 
         return;

@@ -57,15 +57,18 @@ export default function AdminRooms() {
     setLoading(true);
     try {
       const payload = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        images: formData.images.filter((img) => img && img.trim() !== ""),
         price: Number(formData.price),
         capacity: Number(formData.capacity),
-        availableRooms: Number(formData.availableRooms),
+        room_type: formData.roomType,
+        available_rooms: Number(formData.availableRooms),
         amenities: ["Free WiFi", "TV", "AC"],
       };
 
       if (editingRoom) {
-        const { data } = await axios.put(`${API_URL}/api/rooms/${editingRoom._id}`, payload, {
+        const { data } = await axios.put(`${API_URL}/api/rooms/${editingRoom.id}`, payload, {
           headers: { Authorization: `Bearer ${adminToken}` },
         });
 
@@ -152,7 +155,7 @@ export default function AdminRooms() {
           <tbody className="divide-y divide-slate-100 text-sm">
             {rooms.map((room, index) => (
               <motion.tr
-                key={room._id}
+                key={room.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, delay: index * 0.03 }}
@@ -182,7 +185,7 @@ export default function AdminRooms() {
                     <motion.button
                       whileHover={{ y: -1 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => deleteRoom(room._id)}
+                      onClick={() => deleteRoom(room.id)}
                       className="rounded-lg bg-red-50 p-2 text-red-600 transition-colors hover:text-red-800"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -308,16 +311,35 @@ export default function AdminRooms() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Image Network URL (Primary)</label>
-                  <input
-                    required
-                    type="text"
-                    name="images"
-                    value={formData.images[0] || ""}
-                    onChange={(e) => setFormData({ ...formData, images: [e.target.value] })}
-                    placeholder="https://..."
-                    className="w-full rounded-lg border p-2"
-                  />
+                  <label className="mb-1 block text-sm font-medium">Image Network URLs</label>
+                  <div className="space-y-3">
+                    <input
+                      required
+                      type="url"
+                      value={formData.images[0] || ""}
+                      onChange={(e) => {
+                        const newImages = [...formData.images];
+                        newImages[0] = e.target.value;
+                        setFormData({ ...formData, images: newImages });
+                      }}
+                      placeholder="Primary Image (Required) - https://..."
+                      className="w-full rounded-lg border p-2"
+                    />
+                    {[1, 2, 3].map((index) => (
+                      <input
+                        key={index}
+                        type="url"
+                        value={formData.images[index] || ""}
+                        onChange={(e) => {
+                          const newImages = [...formData.images];
+                          newImages[index] = e.target.value;
+                          setFormData({ ...formData, images: newImages });
+                        }}
+                        placeholder={`Optional Image ${index} - https://...`}
+                        className="w-full rounded-lg border p-2"
+                      />
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">

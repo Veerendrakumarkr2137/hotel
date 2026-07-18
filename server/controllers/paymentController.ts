@@ -1,8 +1,7 @@
 import axios from "axios";
 import crypto from "crypto";
 import { Response } from "express";
-import { Booking } from "../models/Booking";
-import { Room } from "../models/Room";
+import { supabase } from "../lib/supabaseClient";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import {
   BookingValidationError,
@@ -10,6 +9,7 @@ import {
   validateBookingInput,
 } from "../lib/bookingValidation";
 import { getFrontendUrl, getHotelContactDetails, getHotelUpiDetails } from "../lib/runtimeConfig";
+import { adaptBooking } from "../lib/adapters";
 
 const PHONEPE_BASE_URL = "https://api-preprod.phonepe.com/apis/pg-sandbox";
 const PHONEPE_PAY_PATH = "/pg/v1/pay";
@@ -98,6 +98,7 @@ function getRedirectUrl(paymentResponse: any) {
   );
 }
 
+// Map the gateway transaction ID from the status payload
 function getGatewayTransactionId(statusResponse: any) {
   return (
     statusResponse?.data?.transactionId ||
@@ -134,6 +135,11 @@ function evaluateStatus(statusResponse: any, expectedAmount: number, expectedTra
   const isTransactionValid = responseTransactionId ? responseTransactionId === expectedTransactionId : true;
   const successStates = new Set(["COMPLETED", "PAYMENT_SUCCESS", "SUCCESS"]);
   const failureStates = new Set(["FAILED", "FAILURE", "PAYMENT_ERROR", "BAD_REQUEST", "DECLINED", "EXPIRED", "CANCELLED"]);
+
+  if (!isAmountValid || !isTransactionValid) {
+    return "failed" as const;
+  }
+
   const isSuccess =
     statusResponse?.success === true &&
     (successStates.has(rawState) || successStates.has(rawCode) || rawCode === "SUCCESS");
@@ -141,10 +147,6 @@ function evaluateStatus(statusResponse: any, expectedAmount: number, expectedTra
     statusResponse?.success === false ||
     failureStates.has(rawState) ||
     failureStates.has(rawCode);
-
-  if (!isAmountValid || !isTransactionValid) {
-    return "failed" as const;
-  }
 
   if (isSuccess) {
     return "paid" as const;
@@ -170,72 +172,101 @@ async function prepareBookingForPayment(
   }
 
   if (bookingId) {
-    const existingBooking = await Booking.findOne({ _id: bookingId, userId }).populate("roomId");
+    const { data: existingBooking, error } = await supabase
+      .from("bookings")
+      .select("*, roomId:rooms(*)")
+      .eq("id", bookingId)
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    if (!existingBooking) {
+    if (error || !existingBooking) {
       return { error: "Booking not found", status: 404 as const };
     }
 
-    if (["cancelled", "completed"].includes(existingBooking.bookingStatus)) {
+    if (["cancelled", "completed"].includes(existingBooking.booking_status)) {
       return { error: "This booking can no longer be paid online", status: 400 as const };
     }
 
-    if (existingBooking.paymentStatus === "paid") {
+    if (existingBooking.payment_status === "paid") {
       return { error: "This booking is already paid", status: 400 as const };
     }
 
-    existingBooking.transactionId = transactionId;
-    existingBooking.orderId = transactionId;
-    existingBooking.paymentId = null;
-    existingBooking.signature = null;
-    existingBooking.paymentStatus = "pending";
-    existingBooking.bookingStatus = "pending_payment";
-    existingBooking.paymentMethod = "PhonePe";
-    await existingBooking.save();
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from("bookings")
+      .update({
+        transaction_id: transactionId,
+        order_id: transactionId,
+        payment_id: null,
+        signature: null,
+        payment_status: "pending",
+        booking_status: "pending_payment",
+        payment_method: "PhonePe",
+      })
+      .eq("id", existingBooking.id)
+      .select("*, roomId:rooms(*)")
+      .single();
 
-    return { booking: existingBooking };
+    if (updateError || !updatedBooking) {
+      return { error: "Failed to update transaction state on booking", status: 500 as const };
+    }
+
+    return { booking: updatedBooking };
   }
 
   if (!isValidBookingData(bookingData)) {
     return { error: "Invalid booking details", status: 400 as const };
   }
 
-  const room = await Room.findById(bookingData.roomId);
+  const { data: room, error: roomError } = await supabase
+    .from("rooms")
+    .select("*")
+    .eq("id", bookingData.roomId)
+    .maybeSingle();
 
-  if (!room) {
+  if (roomError || !room) {
     return { error: "Room not found", status: 404 as const };
   }
 
   const validatedBooking = await validateBookingInput(room, bookingData);
   await ensureRoomAvailability(
-    room._id,
+    room.id,
     validatedBooking.checkInDate,
     validatedBooking.checkOutDate,
-    room.availableRooms,
+    room.available_rooms,
   );
 
   const bookingRef = `AIH-${Date.now()}`;
-  const booking = await Booking.create({
-    bookingRef,
-    userId,
-    roomId: bookingData.roomId,
-    name: validatedBooking.name,
-    email: validatedBooking.email,
-    phone: validatedBooking.phone,
-    checkInDate: validatedBooking.checkInDate,
-    checkOutDate: validatedBooking.checkOutDate,
-    guests: validatedBooking.guests,
-    totalPrice: validatedBooking.totalPrice,
-    paymentStatus: "pending",
-    bookingStatus: "pending_payment",
-    paymentMethod: "PhonePe",
-    transactionId,
-    orderId: transactionId,
-    paymentId: null,
-    signature: null,
-  });
+  const { data: booking, error: insertError } = await supabase
+    .from("bookings")
+    .insert({
+      booking_ref: bookingRef,
+      user_id: userId,
+      room_id: bookingData.roomId,
+      name: validatedBooking.name,
+      email: validatedBooking.email,
+      phone: validatedBooking.phone,
+      check_in_date: validatedBooking.checkInDate.toISOString(),
+      check_out_date: validatedBooking.checkOutDate.toISOString(),
+      guests: validatedBooking.guests,
+      total_price: validatedBooking.totalPrice,
+      payment_status: "pending",
+      booking_status: "pending_payment",
+      payment_method: "PhonePe",
+      transaction_id: transactionId,
+      order_id: transactionId,
+    })
+    .select()
+    .single();
 
-  const populatedBooking = await Booking.findById(booking._id).populate("roomId");
+  if (insertError || !booking) {
+    return { error: insertError?.message || "Failed to create booking", status: 500 as const };
+  }
+
+  const { data: populatedBooking } = await supabase
+    .from("bookings")
+    .select("*, roomId:rooms(*)")
+    .eq("id", booking.id)
+    .maybeSingle();
 
   return { booking: populatedBooking || booking };
 }
@@ -262,33 +293,48 @@ async function syncPhonePeBooking(transactionId: string) {
     throw new Error(`PhonePe configuration is missing: ${getMissingPhonePeConfigKeys().join(", ")}`);
   }
 
-  const booking = await Booking.findOne({ transactionId }).populate("roomId");
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("*, roomId:rooms(*)")
+    .eq("transaction_id", transactionId)
+    .maybeSingle();
 
-  if (!booking) {
+  if (error || !booking) {
     throw new Error("Booking not found");
   }
 
   const statusResponse = await fetchPhonePeStatus(transactionId, config);
-  const paymentStatus = evaluateStatus(statusResponse, Math.round(booking.totalPrice * 100), transactionId);
+  const paymentStatus = evaluateStatus(statusResponse, Math.round(Number(booking.total_price) * 100), transactionId);
 
-  booking.paymentMethod = "PhonePe";
+  const updates: Record<string, any> = {
+    payment_method: "PhonePe",
+  };
 
   if (paymentStatus === "paid") {
-    booking.paymentStatus = "paid";
-    booking.bookingStatus = "confirmed";
-    booking.paymentId = getGatewayTransactionId(statusResponse) || booking.paymentId;
+    updates.payment_status = "paid";
+    updates.booking_status = "confirmed";
+    updates.payment_id = getGatewayTransactionId(statusResponse) || booking.payment_id;
   } else if (paymentStatus === "failed") {
-    booking.paymentStatus = "failed";
-    booking.bookingStatus = "pending_payment";
+    updates.payment_status = "failed";
+    updates.booking_status = "pending_payment";
   } else {
-    booking.paymentStatus = "pending";
-    booking.bookingStatus = "pending_payment";
+    updates.payment_status = "pending";
+    updates.booking_status = "pending_payment";
   }
 
-  await booking.save();
+  const { data: updatedBooking, error: updateError } = await supabase
+    .from("bookings")
+    .update(updates)
+    .eq("id", booking.id)
+    .select("*, roomId:rooms(*)")
+    .single();
+
+  if (updateError || !updatedBooking) {
+    throw updateError || new Error("Failed to update payment status");
+  }
 
   return {
-    booking,
+    booking: updatedBooking,
     statusResponse,
     paymentStatus,
   };
@@ -320,13 +366,13 @@ export async function createPhonePePayment(request: AuthenticatedRequest, respon
 
     activeBooking = preparedBooking.booking;
     const serverBaseUrl = getServerBaseUrl(request);
-    const redirectUrl = `${getFrontendUrl()}/booking-confirmation/${activeBooking._id}?transactionId=${transactionId}`;
+    const redirectUrl = `${getFrontendUrl()}/booking-confirmation/${activeBooking.id}?transactionId=${transactionId}`;
     const callbackUrl = `${serverBaseUrl}/api/payment/phonepe/callback/${transactionId}`;
     const payload = {
       merchantId: config.merchantId,
       merchantTransactionId: transactionId,
       merchantUserId: request.auth?.userId,
-      amount: Math.round(Number(activeBooking.totalPrice) * 100),
+      amount: Math.round(Number(activeBooking.total_price) * 100),
       redirectUrl,
       redirectMode: "REDIRECT",
       callbackUrl,
@@ -351,36 +397,41 @@ export async function createPhonePePayment(request: AuthenticatedRequest, respon
     const phonePeRedirectUrl = getRedirectUrl(paymentResponse.data);
 
     if (!phonePeRedirectUrl) {
-      activeBooking.paymentStatus = "failed";
-      await activeBooking.save();
+      await supabase
+        .from("bookings")
+        .update({ payment_status: "failed" })
+        .eq("id", activeBooking.id);
+        
       return response.status(502).json({
         success: false,
         error: "PhonePe did not return a redirect URL",
-        bookingId: activeBooking._id,
+        bookingId: activeBooking.id,
       });
     }
 
     return response.json({
       success: true,
-      bookingId: activeBooking._id,
+      bookingId: activeBooking.id,
       transactionId,
       redirectUrl: phonePeRedirectUrl,
     });
   } catch (error: any) {
     if (activeBooking) {
-      activeBooking.paymentStatus = "failed";
-      await activeBooking.save();
+      await supabase
+        .from("bookings")
+        .update({ payment_status: "failed" })
+        .eq("id", activeBooking.id);
     }
 
     if (error instanceof BookingValidationError) {
       return response.status(error.status).json({
         success: false,
         error: error.message,
-        bookingId: activeBooking?._id,
+        bookingId: activeBooking?.id,
       });
     }
 
-    const bookingId = error?.response?.data?.bookingId || activeBooking?._id;
+    const bookingId = error?.response?.data?.bookingId || activeBooking?.id;
     const errorMessage =
       error?.response?.data?.message ||
       error?.response?.data?.error ||
@@ -413,13 +464,17 @@ export async function getPaymentConfig(_request: AuthenticatedRequest, response:
 export async function getPhonePePaymentStatus(request: AuthenticatedRequest, response: Response): Promise<any> {
   try {
     const transactionId = request.params.transactionId;
-    const booking = await Booking.findOne({ transactionId }).populate("roomId");
+    const { data: booking, error } = await supabase
+      .from("bookings")
+      .select("*, roomId:rooms(*)")
+      .eq("transaction_id", transactionId)
+      .maybeSingle();
 
-    if (!booking) {
+    if (error || !booking) {
       return response.status(404).json({ success: false, error: "Booking not found" });
     }
 
-    if (booking.userId.toString() !== request.auth?.userId) {
+    if (booking.user_id !== request.auth?.userId) {
       return response.status(403).json({ success: false, error: "Access denied" });
     }
 
@@ -428,7 +483,7 @@ export async function getPhonePePaymentStatus(request: AuthenticatedRequest, res
     return response.json({
       success: true,
       paymentStatus: syncedBooking.paymentStatus,
-      booking: syncedBooking.booking,
+      booking: adaptBooking(syncedBooking.booking),
       phonePe: syncedBooking.statusResponse,
     });
   } catch (error: any) {

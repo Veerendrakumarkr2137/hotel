@@ -44,4 +44,46 @@ export const defaultRooms = [
     amenities: ["Free WiFi", "2 Bedrooms", "Kitchenette", "Living Area", "Bathtub", "Smart TV"],
     availableRooms: 3,
   },
+  {
+    title: "Presidential Royal Suite",
+    description:
+      "Indulge in pure luxury with our Presidential Suite. Features a private kitchen, master living room, stunning panoramic city views, and dedicated butler service.",
+    price: 15000,
+    images: [
+      "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80",
+    ],
+    roomType: "Presidential Suite",
+    capacity: 6,
+    amenities: ["Free WiFi", "Private Kitchen", "Panoramic Views", "Dedicated Butler", "King Bed", "Living Room", "Jacuzzi"],
+    availableRooms: 1,
+  },
+  {
+    title: "Classic Single Cozy Room",
+    description:
+      "Cozy and convenient, our Classic Single Room is ideal for solo travelers. Equipped with a comfortable queen bed, workspaces, and essential amenities for a pleasant stay.",
+    price: 1800,
+    images: [
+      "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&q=80",
+    ],
+    roomType: "Single Room",
+    capacity: 1,
+    amenities: ["Free WiFi", "Queen Bed", "Desk Workspace", "Mini Fridge", "Air Conditioning"],
+    availableRooms: 8,
+  },
+  {
+    title: "Standard Twin Double Room",
+    description:
+      "Comfortable room featuring two twin beds, perfect for friends or business colleagues sharing a stay.",
+    price: 2500,
+    images: [
+      "https://images.unsplash.com/photo-1568495248636-6432b97bd949?auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80",
+    ],
+    roomType: "Double Room",
+    capacity: 2,
+    amenities: ["Free WiFi", "Twin Beds", "Desk Workspace", "Air Conditioning", "Coffee Maker"],
+    availableRooms: 6,
+  },
 ];

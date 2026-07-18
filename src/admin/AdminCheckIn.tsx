@@ -15,7 +15,7 @@ import {
 } from "../lib/bookingUi";
 
 type AdminBookingRecord = {
-  _id: string;
+  id: string;
   bookingRef: string;
   name: string;
   email: string;
@@ -91,13 +91,13 @@ export default function AdminCheckIn() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (token) {
+    if (adminToken) {
       fetchBookings();
       return;
     }
 
     setLoading(false);
-  }, [token]);
+  }, [adminToken]);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -163,11 +163,11 @@ export default function AdminCheckIn() {
       return;
     }
 
-    setUpdatingId(booking._id);
+    setUpdatingId(booking.id);
 
     try {
       const { data } = await axios.put(
-        `${API_URL}/api/bookings/admin/${booking._id}/status`,
+        `${API_URL}/api/bookings/admin/${booking.id}/status`,
         { status: "checked_in" },
         {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -266,7 +266,7 @@ export default function AdminCheckIn() {
 
                 return (
                   <motion.tr
-                    key={booking._id}
+                    key={booking.id}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.28, delay: index * 0.03 }}
@@ -322,10 +322,10 @@ export default function AdminCheckIn() {
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => handleCheckIn(booking)}
-                        disabled={arrivalState.disabled || updatingId === booking._id}
+                        disabled={arrivalState.disabled || updatingId === booking.id}
                         className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                       >
-                        {updatingId === booking._id ? (
+                        {updatingId === booking.id ? (
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                         ) : (
                           <LogIn className="h-4 w-4" />
