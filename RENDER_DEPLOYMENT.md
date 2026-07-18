@@ -38,8 +38,8 @@ When creating the web service, fill in:
 After creating the service, go to **Settings** → **Environment** and add:
 
 ```
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?appName=hotel
-# MONGO_URI can be used as an alias if needed
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 PORT=3000
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=change-me
