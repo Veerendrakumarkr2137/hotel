@@ -4,7 +4,7 @@ import express from "express";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { createServer as createViteServer } from "vite";
+
 import dotenv from "dotenv";
 import cors from "cors";
 
@@ -146,6 +146,7 @@ app.use("/api/payment", paymentLimiter, paymentRoutes);
 
 async function startServer() {
   if (!IS_PRODUCTION) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
