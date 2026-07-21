@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 
+// Load environment variables
 dotenv.config();
 
 const DEFAULT_HOTEL_UPI_ID = "8792629439@okaxis";
