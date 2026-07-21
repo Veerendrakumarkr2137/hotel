@@ -91,7 +91,7 @@ Vercel will auto-deploy the frontend.
 5. Check Render logs if any issues
 
 ## Troubleshooting:
-- **MongoDB connection error:** Verify MONGODB_URI in Render env vars
+- **Supabase connection error:** Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Render env vars
 - **404 Not Found:** Backend URL in api.ts might be wrong
 - **CORS error:** Check if frontend URL is whitelisted
 - **UPI option not showing:** Make sure `HOTEL_UPI_ID` is set on the deployed backend and redeploy/restart Render
@@ -99,5 +99,5 @@ Vercel will auto-deploy the frontend.
 
 ## Important Notes:
 ⚠️ Free tier on Render will spin down after 15 minutes of inactivity
-✓ All your data persists in MongoDB Atlas (separate)
+✓ All your data persists in Supabase (separate)
 ✓ Frontend stays on Vercel (always active)

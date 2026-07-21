@@ -86,7 +86,6 @@ export const getDashboardStats = async (_request: Request, response: Response): 
       : 0;
 
     const recentUsers = (recentUsersData.data || []).map((user) => ({
-      _id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
@@ -130,7 +129,6 @@ export const getAllUsers = async (_request: Request, response: Response): Promis
     if (error) throw error;
 
     const adaptedUsers = (users || []).map((user) => ({
-      _id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,

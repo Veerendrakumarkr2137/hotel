@@ -11,7 +11,7 @@ A production-ready MERN hotel booking app with customer + admin flows, JWT auth,
 
 ## Tech Stack
 - Frontend: React + Vite + Tailwind
-- Backend: Node/Express + MongoDB (Mongoose)
+- Backend: Node/Express + Supabase (PostgreSQL)
 - Auth: JWT + Google OAuth
 
 ## Quick Start (Local)
@@ -33,7 +33,8 @@ Server runs on `http://localhost:5000`.
 See `.env.example` for the full list. Key ones:
 
 **Backend**
-- `MONGODB_URI`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET`
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
@@ -68,4 +69,4 @@ Use the same client ID for:
 Use `RENDER_DEPLOYMENT.md` for step-by-step Render + Vercel deployment.
 
 ## API Health
-`GET /api/health` returns server status and MongoDB connection state.
+`GET /api/health` returns server status and Supabase connection state.

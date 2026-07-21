@@ -2,7 +2,6 @@ export function adaptRoom(room: any) {
   if (!room) return null;
   return {
     ...room,
-    _id: room.id,
     roomType: room.room_type,
     availableRooms: room.available_rooms,
   };
@@ -21,13 +20,11 @@ export function adaptBooking(booking: any) {
   if (adaptedUser && typeof adaptedUser === "object") {
     adaptedUser = {
       ...adaptedUser,
-      _id: adaptedUser.id,
     };
   }
 
   return {
     ...booking,
-    _id: booking.id,
     userId: adaptedUser || booking.user_id,
     roomId: adaptedRoom || booking.room_id,
     bookingRef: booking.booking_ref,

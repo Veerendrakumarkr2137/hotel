@@ -137,7 +137,7 @@ export const registerUser = async (req: Request, res: Response): Promise<any> =>
     return res.status(201).json({
       success: true,
       message: "Registered successfully",
-      user: { id: user.id, _id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error: any) {
     console.error("Registration error:", error.message);
@@ -161,7 +161,7 @@ export const loginUser = async (req: Request, res: Response): Promise<any> => {
     return res.json({
       success: true,
       token: issueUserToken(user),
-      user: { id: user.id, _id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error: any) {
     console.error("Login error:", error.message);
@@ -238,7 +238,7 @@ export const loginWithGoogle = async (req: Request, res: Response): Promise<any>
     return res.json({
       success: true,
       token: issueUserToken(user as UserRecord),
-      user: { id: user.id, _id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error: any) {
     console.error("Google login error:", error?.message || error);
@@ -361,7 +361,7 @@ export const getCurrentUser = async (req: any, res: Response): Promise<any> => {
 
     return res.json({
       success: true,
-      user: { id: user.id, _id: user.id, name: user.name, email: user.email, role: "user" },
+      user: { id: user.id, name: user.name, email: user.email, role: "user" },
     });
   } catch (error: any) {
     console.error("Get profile error:", error?.message || error);
@@ -408,7 +408,7 @@ export const updateProfile = async (req: any, res: Response): Promise<any> => {
 
     return res.json({
       success: true,
-      user: { id: updatedUser.id, _id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, role: "user" },
+      user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, role: "user" },
     });
   } catch (error: any) {
     console.error("Update profile error:", error?.message || error);
